@@ -19,7 +19,7 @@ kotlin {
     }
     
     android {
-       namespace = "pe.edu.upeu.pharmamobil.shared"
+       namespace = "pe.upeu.biblioandes.shared"
        compileSdk = libs.versions.android.compileSdk.get().toInt()
        minSdk = libs.versions.android.minSdk.get().toInt()
     
