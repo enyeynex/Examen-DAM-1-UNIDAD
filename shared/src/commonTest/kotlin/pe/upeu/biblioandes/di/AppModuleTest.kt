@@ -8,16 +8,16 @@ import kotlinx.coroutines.test.setMain
 import org.koin.core.Koin
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
-import pe.upeu.biblioandes.data.repository.ClienteRepositorioEnMemoria
-import pe.upeu.biblioandes.data.repository.ProductoRepositorioEnMemoria
-import pe.upeu.biblioandes.domain.repository.ClienteRepository
-import pe.upeu.biblioandes.domain.repository.ProductoRepository
-import pe.upeu.biblioandes.domain.usecase.ListarClientesUseCase
-import pe.upeu.biblioandes.domain.usecase.ListarProductosUseCase
-import pe.upeu.biblioandes.domain.usecase.RegistrarClienteUseCase
-import pe.upeu.biblioandes.domain.usecase.RegistrarProductoUseCase
-import pe.upeu.biblioandes.presentation.cliente.ClienteViewModel
-import pe.upeu.biblioandes.presentation.producto.ProductoViewModel
+import org.koin.core.parameter.parametersOf
+import pe.upeu.biblioandes.data.repository.BibliotecaRepositoryFake
+import pe.upeu.biblioandes.domain.repository.BibliotecaRepository
+import pe.upeu.biblioandes.domain.usecase.ObtenerCatalogoUseCase
+import pe.upeu.biblioandes.domain.usecase.SolicitarPrestamoUseCase
+import pe.upeu.biblioandes.presentation.catalogo.CatalogoViewModel
+import pe.upeu.biblioandes.presentation.detalle.DetalleLibroViewModel
+import pe.upeu.biblioandes.presentation.inicio.InicioViewModel
+import pe.upeu.biblioandes.presentation.perfil.PerfilViewModel
+import pe.upeu.biblioandes.presentation.prestamos.PrestamosViewModel
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -25,13 +25,8 @@ import kotlin.test.assertIs
 import kotlin.test.assertSame
 
 /**
- * Comprueba que el grafo se ensambla sin arrancar la aplicacion: si una
- * definicion falta o esta declarada con el tipo equivocado, falla aqui.
- *
- * Se cargan los cuatro modulos, incluido presentationModule: construir un
- * ViewModel es justo lo que se rompe al cambiar un constructor, y antes era
- * lo unico que el grafo no cubria. Como los ViewModel arrancan una carga en
- * su init, hace falta un Dispatchers.Main de prueba.
+ * Comprueba que el grafo de Koin se ensambla sin arrancar la aplicacion: si
+ * una definicion falta o cambia el constructor de una clase, falla aqui.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppModuleTest {
@@ -52,46 +47,26 @@ class AppModuleTest {
     }.koin
 
     @Test
-    fun resuelveLosRepositoriosPorSuInterfazDeDominio() {
+    fun elRepositorioSeResuelvePorSuInterfazYEsUnico() {
 
         val koin = grafoCompleto()
 
-        assertIs<ProductoRepositorioEnMemoria>(koin.get<ProductoRepository>())
-        assertIs<ClienteRepositorioEnMemoria>(koin.get<ClienteRepository>())
+        assertIs<BibliotecaRepositoryFake>(koin.get<BibliotecaRepository>())
+        assertSame(koin.get<BibliotecaRepository>(), koin.get<BibliotecaRepository>())
     }
 
     @Test
-    fun losRepositoriosSonUnicosEnTodaLaAplicacion() {
+    fun resuelveLosCasosDeUsoYLosViewModel() {
 
         val koin = grafoCompleto()
 
-        assertSame(
-            koin.get<ProductoRepository>(),
-            koin.get<ProductoRepository>()
-        )
-        assertSame(
-            koin.get<ClienteRepository>(),
-            koin.get<ClienteRepository>()
-        )
-    }
+        koin.get<ObtenerCatalogoUseCase>()
+        koin.get<SolicitarPrestamoUseCase>()
 
-    @Test
-    fun resuelveLosCuatroCasosDeUsoConSusRepositorios() {
-
-        val koin = grafoCompleto()
-
-        koin.get<RegistrarProductoUseCase>()
-        koin.get<ListarProductosUseCase>()
-        koin.get<RegistrarClienteUseCase>()
-        koin.get<ListarClientesUseCase>()
-    }
-
-    @Test
-    fun resuelveLosViewModelConSusCasosDeUso() {
-
-        val koin = grafoCompleto()
-
-        koin.get<ProductoViewModel>()
-        koin.get<ClienteViewModel>()
+        koin.get<InicioViewModel>()
+        koin.get<CatalogoViewModel>()
+        koin.get<PrestamosViewModel>()
+        koin.get<PerfilViewModel>()
+        koin.get<DetalleLibroViewModel> { parametersOf(1) }
     }
 }
