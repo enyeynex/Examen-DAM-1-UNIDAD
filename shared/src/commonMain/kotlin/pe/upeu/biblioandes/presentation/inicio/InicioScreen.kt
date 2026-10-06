@@ -6,185 +6,219 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.LocalPharmacy
-import androidx.compose.material.icons.filled.Medication
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Bookmarks
+import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import pe.upeu.biblioandes.navigation.Screen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.koin.compose.viewmodel.koinViewModel
+import pe.upeu.biblioandes.domain.model.EstadoPrestamo
+import pe.upeu.biblioandes.domain.model.Estudiante
+import pe.upeu.biblioandes.domain.model.Prestamo
+import pe.upeu.biblioandes.presentation.components.EstadoCargando
+import pe.upeu.biblioandes.presentation.components.EstadoError
+import pe.upeu.biblioandes.presentation.components.Etiqueta
+import pe.upeu.biblioandes.presentation.components.descripcion
+import pe.upeu.biblioandes.presentation.components.fechaCorta
+import pe.upeu.biblioandes.presentation.inicio.InicioUiState.Fase
 
-/** Cada acceso rapido de la portada lleva a uno de los modulos de la app. */
-private data class Opcion(
-    val screen: Screen,
-    val icono: ImageVector,
-    val titulo: String,
-    val descripcion: String
-)
+@Composable
+fun InicioRoute(
+    onIrAlCatalogo: () -> Unit,
+    onIrAPrestamos: () -> Unit,
+    viewModel: InicioViewModel = koinViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-private val OPCIONES = listOf(
-    Opcion(
-        screen = Screen.Productos,
-        icono = Icons.Default.Medication,
-        titulo = "Registrar productos",
-        descripcion = "Da de alta medicamentos con su precio y su stock."
-    ),
-    Opcion(
-        screen = Screen.Clientes,
-        icono = Icons.Default.Person,
-        titulo = "Registrar clientes",
-        descripcion = "Guarda los datos de contacto para la boleta."
-    ),
-    Opcion(
-        screen = Screen.Pedidos,
-        icono = Icons.Default.ShoppingCart,
-        titulo = "Revisar pedidos",
-        descripcion = "Disponible en una próxima sesión del curso."
+    LaunchedEffect(Unit) { viewModel.cargar() }
+
+    InicioScreen(
+        uiState = uiState,
+        onIrAlCatalogo = onIrAlCatalogo,
+        onIrAPrestamos = onIrAPrestamos,
+        onReintentar = viewModel::cargar
     )
-)
+}
 
 @Composable
 fun InicioScreen(
-    onNavegar: (Screen) -> Unit,
+    uiState: InicioUiState,
+    onIrAlCatalogo: () -> Unit,
+    onIrAPrestamos: () -> Unit,
+    onReintentar: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    when (val fase = uiState.fase) {
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-
-        Portada()
-
-        Text(
-            text = "Qué puedes hacer",
-            style = MaterialTheme.typography.titleMedium
+        Fase.Cargando -> EstadoCargando(
+            mensaje = "Preparando tu biblioteca…",
+            modifier = modifier
         )
 
-        OPCIONES.forEach { opcion ->
+        is Fase.Error -> EstadoError(
+            mensaje = fase.mensaje,
+            onReintentar = onReintentar,
+            modifier = modifier
+        )
 
-            AccesoRapido(
-                icono = opcion.icono,
-                titulo = opcion.titulo,
-                descripcion = opcion.descripcion,
-                onClick = {
-                    onNavegar(opcion.screen)
-                }
+        is Fase.Contenido -> Column(
+            modifier = modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            Saludo(estudiante = fase.estudiante)
+
+            ProximaDevolucion(
+                prestamo = fase.proximaDevolucion,
+                onClick = onIrAPrestamos
             )
+
+            Text(
+                text = "Accesos rápidos",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                AccesoRapido(
+                    icono = Icons.AutoMirrored.Filled.MenuBook,
+                    titulo = "Catálogo",
+                    descripcion = "Busca y solicita libros",
+                    onClick = onIrAlCatalogo,
+                    modifier = Modifier.weight(1f)
+                )
+                AccesoRapido(
+                    icono = Icons.Default.Bookmarks,
+                    titulo = "Mis préstamos",
+                    descripcion = "Revisa tus fechas",
+                    onClick = onIrAPrestamos,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
     }
 }
 
-
 @Composable
-private fun Portada() {
+private fun Saludo(estudiante: Estudiante) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            // Solo el primer nombre: "Diego Huamán Ccama" se saluda como "Diego".
+            text = "Hola, ${estudiante.nombre.substringBefore(' ')}",
+            style = MaterialTheme.typography.headlineMedium
+        )
+        Text(
+            text = "${estudiante.carrera} · ${estudiante.codigo}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+/** Tarjeta destacada: el prestamo cuya devolucion vence primero. */
+@Composable
+private fun ProximaDevolucion(
+    prestamo: Prestamo?,
+    onClick: () -> Unit
+) {
+    val colores = MaterialTheme.colorScheme
+    val vencido = prestamo?.estado is EstadoPrestamo.Vencido
 
     Card(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            containerColor = if (vencido) colores.errorContainer else colores.primaryContainer,
+            contentColor = if (vencido) colores.onErrorContainer else colores.onPrimaryContainer
         )
     ) {
-
         Column(
             modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-
-            Icon(
-                imageVector = Icons.Default.LocalPharmacy,
-                contentDescription = null,
-                modifier = Modifier.size(40.dp)
-            )
-
             Text(
-                text = "PharmaMobil",
-                style = MaterialTheme.typography.headlineSmall
+                text = "Tu próxima devolución",
+                style = MaterialTheme.typography.labelLarge
             )
 
-            Text(
-                text = "Sistema de gestión farmacéutica para tu cadena de boticas.",
-                style = MaterialTheme.typography.bodyMedium
-            )
+            if (prestamo == null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(Icons.Default.TaskAlt, contentDescription = null)
+                    Text(
+                        text = "No tienes devoluciones pendientes.",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            } else {
+                Text(
+                    text = prestamo.libro.titulo,
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Text(
+                    text = "Devolver hasta el ${fechaCorta(prestamo.fechaLimite)}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                // Sobre una tarjeta de color la etiqueta va en tono neutro para que se lea.
+                Etiqueta(
+                    texto = prestamo.estado.descripcion(),
+                    fondo = colores.surface,
+                    colorTexto = colores.onSurface
+                )
+            }
         }
     }
 }
-
 
 @Composable
 private fun AccesoRapido(
     icono: ImageVector,
     titulo: String,
     descripcion: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        )
     ) {
-
-        Row(
+        Column(
             modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-            ) {
-
-                Icon(
-                    imageVector = icono,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .padding(10.dp)
-                        .size(22.dp)
-                )
-            }
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-
-                Text(
-                    text = titulo,
-                    style = MaterialTheme.typography.titleSmall
-                )
-
-                Text(
-                    text = descripcion,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
             Icon(
-                imageVector = Icons.Default.ChevronRight,
+                imageVector = icono,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = titulo,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = descripcion,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

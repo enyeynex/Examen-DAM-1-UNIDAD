@@ -60,6 +60,8 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
+            // Navegacion entre pantallas: NavHost, rutas y pila de retorno.
+            implementation(libs.androidx.navigation.compose)
             // Fechas multiplataforma: el dominio calcula plazos y atrasos de los prestamos.
             implementation(libs.kotlinx.datetime)
         }
