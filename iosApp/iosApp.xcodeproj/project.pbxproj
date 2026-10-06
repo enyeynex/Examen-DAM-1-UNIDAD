@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		F41AA060E37364C5C10EDCFC /* PharmaMobil.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PharmaMobil.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F41AA060E37364C5C10EDCFC /* BiblioAndes.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BiblioAndes.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -59,7 +59,7 @@
 		222A56B094C2DBA479E0ABCA /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				F41AA060E37364C5C10EDCFC /* PharmaMobil.app */,
+				F41AA060E37364C5C10EDCFC /* BiblioAndes.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -87,7 +87,7 @@
 			packageProductDependencies = (
 			);
 			productName = iosApp;
-			productReference = F41AA060E37364C5C10EDCFC /* PharmaMobil.app */;
+			productReference = F41AA060E37364C5C10EDCFC /* BiblioAndes.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
