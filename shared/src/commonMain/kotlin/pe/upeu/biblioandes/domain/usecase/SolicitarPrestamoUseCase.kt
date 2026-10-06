@@ -1,5 +1,7 @@
 package pe.upeu.biblioandes.domain.usecase
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import pe.upeu.biblioandes.domain.model.MotivoRechazo
 import pe.upeu.biblioandes.domain.model.PoliticaPrestamo
 import pe.upeu.biblioandes.domain.model.Prestamo
@@ -21,27 +23,33 @@ class SolicitarPrestamoUseCase(
 ) {
 
     suspend operator fun invoke(libroId: Int): Result<Prestamo> = resultadoDe {
+        coroutineScope {
 
-        val libro = repository.obtenerLibro(libroId)
-            ?: error("No se encontró el libro solicitado")
+            // Las dos consultas no dependen una de la otra: se piden a la vez.
+            val libroPedido = async { repository.obtenerLibro(libroId) }
+            val prestamosPedidos = async { repository.obtenerPrestamos() }
 
-        val hoy = calendario.hoy()
-        val prestamos = repository.obtenerPrestamos()
-            .map { PoliticaPrestamo.actualizarEstado(it, hoy) }
+            val libro = libroPedido.await()
+                ?: error("No se encontró el libro solicitado")
 
-        val motivo = PoliticaPrestamo.motivoDeRechazo(libro, prestamos)
-        if (motivo != null) throw SolicitudRechazadaException(motivo)
+            val hoy = calendario.hoy()
+            val prestamos = prestamosPedidos.await()
+                .map { PoliticaPrestamo.actualizarEstado(it, hoy) }
 
-        val limite = PoliticaPrestamo.fechaLimite(hoy)
+            val motivo = PoliticaPrestamo.motivoDeRechazo(libro, prestamos)
+            if (motivo != null) throw SolicitudRechazadaException(motivo)
 
-        repository.registrarPrestamo(
-            Prestamo(
-                id = 0,
-                libro = libro,
-                fechaPrestamo = hoy.toString(),
-                fechaLimite = limite.toString(),
-                estado = PoliticaPrestamo.estadoPendiente(limite, hoy)
+            val limite = PoliticaPrestamo.fechaLimite(hoy)
+
+            repository.registrarPrestamo(
+                Prestamo(
+                    id = 0,
+                    libro = libro,
+                    fechaPrestamo = hoy.toString(),
+                    fechaLimite = limite.toString(),
+                    estado = PoliticaPrestamo.estadoPendiente(limite, hoy)
+                )
             )
-        )
+        }
     }
 }
